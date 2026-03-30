@@ -20,4 +20,3 @@ HashItem buscarHashItem(HashFile hash, int valor){
 void destruirHashFile(HashFile *hash){
     
 }
-
