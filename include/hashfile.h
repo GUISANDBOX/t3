@@ -11,7 +11,9 @@ typedef void *HashFile; // Define o tipo HashFile
 /// @param nome nome do arquivo
 /// @param d profundidade
 /// @return objeto HashFile
-HashFile criarHashFile(char *nome, int d);
+HashFile criarHashFile(char *nome, int recordSize, int bucketSize);
+
+HashFile lerHashFile(HashFile hash);
 
 /// @brief retorna o número de buckets do hashfile
 /// @param hash hashfile a ser consultado
@@ -32,6 +34,11 @@ HashItem buscarHashItem(HashFile hash, int valor);
 
 /// @brief Destrói o hashfile, liberando os recursos alocados 
 /// @param hash hashfile a ser destruído
-void destruirHashFile(HashFile *hash);
+void destruirHashFile(HashFile hash);
+
+/// @brief Função hash simples para strings
+/// @param str string a ser hasheada
+/// @return valor hash
+int hashString(char *str);
 
 #endif

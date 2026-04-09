@@ -3,6 +3,9 @@
 #include <assert.h>
 #include "hashfile.h"
 #include "item.h"
+#include "comandosgeo.h"
+#include "comandospm.h"
+#include "comandosqry.h"
 
 #define PATH_LEN 250
 #define FILE_NAME_LEN 100
@@ -54,11 +57,15 @@ char *getNomeArquivoSemExtensao(const char *caminhoCompleto) {
 }
 
 int main(int argc, char *argv[]) {
-    char dir[PATH_LEN], bed[PATH_LEN], arq[FILE_NAME_LEN], arqquery[FILE_NAME_LEN], dirsaidaqry[PATH_LEN], dirsaida[PATH_LEN], dirsaidabase[PATH_LEN];
+    char dir[PATH_LEN], bed[PATH_LEN], arq[FILE_NAME_LEN], arqquery[FILE_NAME_LEN], arqpm[FILE_NAME_LEN], dirsaidaqry[PATH_LEN], dirsaida[PATH_LEN], dirsaidabase[PATH_LEN];
     char *fullNameArq;
 
     int z;
     int temquery = 0;
+    int tempm = 0;
+    int temf = 0;
+    int temo = 0;
+    int teme = 0;
     char comando[3];
     char a;
     int i=1;
@@ -71,18 +78,21 @@ int main(int argc, char *argv[]) {
              /* se i >= argc: ERRO-falta parametro */
              trataPath(dir,PATH_LEN, argv[i]);
              strcpy(bed, dir);
+             teme = 1;
          }
          else if (strcmp(argv[i],"-f") == 0){
              i++;
              /* se i >= argc: ERRO-falta parametro */
              trataNomeArquivo(arq,FILE_NAME_LEN,argv[i]);
              printf("LIDO ARQ F: %s\n", arq);
+             temf = 1;
          }
          else if (strcmp(argv[i],"-o") == 0){
              i++;
              /* se i >= argc: ERRO-falta parametro */
              trataNomeArquivo(dirsaida,PATH_LEN,argv[i]);
              strcpy(dirsaidabase, dirsaida);
+             temo = 1;
          }
          else if (strcmp(argv[i],"-q") == 0){
              i++;
@@ -90,8 +100,24 @@ int main(int argc, char *argv[]) {
              trataNomeArquivo(arqquery,FILE_NAME_LEN,argv[i]);
              temquery = 1;
          }
+         else if (strcmp(argv[i],"-pm") == 0){
+             i++;
+             /* se i >= argc: ERRO-falta parametro */
+             trataNomeArquivo(arqpm,FILE_NAME_LEN,argv[i]);
+             tempm = 1;
+         }
          i++;
      } //while
+
+    if (!temf || !temo) {
+        printf("Parâmetros -f e -o são obrigatórios.\n");
+        return 1;
+    }
+
+    if (!teme) {
+        strcpy(dir, ".");
+        strcpy(bed, ".");
+    }
 
     strcat(dir,"/");strcat(dir,arq);
     // TODO - fazer com que o nome do arquivo svg seja o nome do arquivo geo com extensão .svg
@@ -103,14 +129,29 @@ int main(int argc, char *argv[]) {
 
     FILE *arqgeo = fopen(dir, "r"); // exemplo.geo e retg-decres.geo
     FILE *arqnovo = fopen(dirsaida, "w+");
-    Fila fila;
-    fila = criafila(0);
+
     if (!arqgeo) {
         printf("Erro ao abrir o arquivo GEO  %s\n", dir);
         return 1;
     }
     
-    fila=processaGeo(arqgeo, fila, arqnovo);
+    HashFile hashQuadra = criarHashFile("hashquadra.dat", 0);
+    processaGeo(arqgeo, hashQuadra);
+
+    HashFile hashPessoa = criarHashFile("hashpessoa.dat", 0);
+    if (tempm) {
+        char dirpm[PATH_LEN];
+        strcpy(dirpm, bed);
+        strcat(dirpm, "/");
+        strcat(dirpm, arqpm);
+        FILE *arqpm_file = fopen(dirpm, "r");
+        if (!arqpm_file) {
+            printf("Erro ao abrir o arquivo PM %s\n", dirpm);
+            return 1;
+        }
+        processaPm(arqpm_file, hashPessoa);
+        fclose(arqpm_file);
+    }
 
     fclose(arqgeo);
     fclose(arqnovo);
@@ -150,11 +191,10 @@ int main(int argc, char *argv[]) {
     printf("Criando TXT %s \n", dirsaidabaseaux);
     FILE *filesaidaquery = fopen(dirsaidabase, "w+");
     FILE *filesaidatxt = fopen(dirsaidabaseaux, "w+");
-    Fila filasaida = criafila(0);
-    processaQry(fileq, filasaida, filesaidaquery, fila, filesaidatxt);
+    processaQry(fileq, hashPessoa, hashQuadra, filesaidatxt);
 
-    limpaFila(&fila);
-    limpaFila(&filasaida);
+    destruirHashFile(&hashQuadra);
+    destruirHashFile(&hashPessoa);
     
     fclose(fileq);
     fclose(filesaidaquery);

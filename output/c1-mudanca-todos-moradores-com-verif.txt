@@ -1,0 +1,8 @@
+Procurar quadra b03.9
+Procurar quadra b04.3
+Mudança: CPF 000.002.091-55 para CEP b04.3, Face Face.W, Num 72, Compl 1o_Andar
+Mudança: CPF 000.005.401-10 para CEP b04.3, Face Face.W, Num 72, Compl 2o_Andar
+Mudança: CPF 000.005.341-45 para CEP b04.3, Face Face.W, Num 72, Compl 3o_Andar
+Mudança: CPF 000.003.931-42 para CEP b04.3, Face Face.W, Num 72, Compl 4o_Andar
+Procurar quadra b03.9
+Procurar quadra b04.3

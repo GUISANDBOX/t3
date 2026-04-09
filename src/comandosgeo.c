@@ -1,6 +1,7 @@
 #include <string.h>
 #include "comandosgeo.h"
 #include "hashfile.h"
+#include "quadra.h"
 
 HashFile processaGeo(FILE *arqgeo, HashFile H) {
     char comando[100];
@@ -16,8 +17,9 @@ HashFile processaGeo(FILE *arqgeo, HashFile H) {
             fscanf(arqgeo, "%s %lf %lf %lf %lf", cep, &x, &y, &w, &h);
             Quadra q = criaQuadra(cep, x, y, w, h, sw, cfill, cstrk);
             if(!adicionarHashItem(&H, q)) {
-                printf("Erro ao adicionar item ao hashfile\n");
+                //printf("Erro ao adicionar item ao hashfile\n");
             }
+            printf("Quadra criada: %s %lf %lf\n", cep, x, y);
         }
         else if (comando[0] == 'c') {
             double rx, ry, rw, rh;
