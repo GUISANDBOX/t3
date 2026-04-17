@@ -24,4 +24,6 @@ char* getCstrk(Quadra q);
 
 size_t tamanhoQuadra(void);
 
+void printQuadra(Quadra q);
+
 #endif

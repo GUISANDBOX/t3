@@ -9,7 +9,8 @@ typedef void *HashFile; // Define o tipo HashFile
 
 /// @brief Cria um hashfile
 /// @param nome nome do arquivo
-/// @param d profundidade
+/// @param recordSize tamanho em bytes de cada registro armazenado
+/// @param bucketSize tamanho em bytes de cada página de bucket
 /// @return objeto HashFile
 HashFile criarHashFile(char *nome, int recordSize, int bucketSize);
 
@@ -20,17 +21,23 @@ HashFile lerHashFile(char *file_name);
 /// @return número de buckets
 int getBucketsLength(HashFile hash);
 
+/// @brief Retorna a chave de bucket usando os bits menos significativos de depth
+/// @param key string da chave
+/// @param depth número de bits do hash a serem usados
+/// @return valor inteiro do bucket
+int getKey(char *key, int depth);
+
 /// @brief Adiciona um item ao hashfile
 /// @param hash hashfile onde o item será adicionado
 /// @param item item a ser adicionado
 /// @return 1 se o item foi adicionado com sucesso, 0 caso contrário
-int adicionarHashItem(HashFile *hash, HashItem item);
+int adicionarHashItem(HashFile *hash, HashItem item, char *key);
 
-/// @brief Busca um item no hashfile pelo valor
+/// @brief Busca um item no hashfile pela chave
 /// @param hash hashfile onde o item será buscado
-/// @param valor valor do item a ser buscado 
+/// @param key string da chave usada para buscar o item
 /// @return o item encontrado ou NULL se não encontrado 
-HashItem buscarHashItem(HashFile hash, int valor);
+HashItem buscarHashItem(HashFile hash, char *key);
 
 /// @brief Destrói o hashfile, liberando os recursos alocados 
 /// @param hash hashfile a ser destruído

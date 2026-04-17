@@ -16,7 +16,7 @@ HashFile processaGeo(FILE *arqgeo, HashFile H) {
         if (comando[0] == 'q') {
             fscanf(arqgeo, "%s %lf %lf %lf %lf", cep, &x, &y, &w, &h);
             Quadra q = criaQuadra(cep, x, y, w, h, sw, cfill, cstrk);
-            if(!adicionarHashItem(&H, q)) {
+            if(!adicionarHashItem(&H, q, getCep(q))) {
                 //printf("Erro ao adicionar item ao hashfile\n");
             }
             printf("Quadra criada: %s %lf %lf\n", cep, x, y);

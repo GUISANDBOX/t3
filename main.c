@@ -6,6 +6,8 @@
 #include "comandosgeo.h"
 #include "comandospm.h"
 #include "comandosqry.h"
+#include "quadra.h"
+#include "pessoa.h"
 
 #define PATH_LEN 250
 #define FILE_NAME_LEN 100
@@ -135,10 +137,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    HashFile hashQuadra = criarHashFile("hashquadra.dat", 0);
+    HashFile hashQuadra = criarHashFile("hashquadra.hf", tamanhoQuadra(), 2048);
     processaGeo(arqgeo, hashQuadra);
 
-    HashFile hashPessoa = criarHashFile("hashpessoa.dat", 0);
+    HashFile hashPessoa = criarHashFile("hashpessoa.hf", tamanhoPessoa(), 2048);
     if (tempm) {
         char dirpm[PATH_LEN];
         strcpy(dirpm, bed);
@@ -152,6 +154,9 @@ int main(int argc, char *argv[]) {
         processaPm(arqpm_file, hashPessoa);
         fclose(arqpm_file);
     }
+
+    printHashFileInfo(hashQuadra);
+    printHashFileInfo(hashPessoa);
 
     fclose(arqgeo);
     fclose(arqnovo);

@@ -27,21 +27,39 @@ void test_tamanho_struct(void) {
 
 void test_inicializacao_hash_d2(void) {
     printf("Iniciando teste de inicialização do hashfile...\n");
-    hash = criarHashFile("output/hashfile.dat", tamanhoQuadra(), 2048);
-    hash = lerHashFile("output/hashfile.dat");
+    hash = criarHashFile("output/hashfile.hf", tamanhoQuadra(), 2048);
+    hash = lerHashFile("output/hashfile.hf");
     TEST_ASSERT_NOT_NULL(hash);
 }
 
 void test_inserir_item_hash(void) {
-    hash = lerHashFile("output/hashfile.dat");
+    hash = lerHashFile("output/hashfile.hf");
     Quadra q1 = criaQuadra("123456780000", 10.0, 20.0, 30.0, 40.0, "sw", "fill", "stroke");
     Quadra q2 = criaQuadra("123456780001", 10.0, 20.0, 30.0, 40.0, "sw", "fill", "stroke");
     Quadra q3 = criaQuadra("123456780002", 10.0, 20.0, 30.0, 40.0, "sw", "fill", "stroke");
-    int res1 = adicionarHashItem(&hash, q1);
-    int res2 = adicionarHashItem(&hash, q2);
-    int res3 = adicionarHashItem(&hash, q3);
+    Quadra q4 = criaQuadra("123456780004", 10.0, 20.0, 30.0, 40.0, "sw", "fill", "stroke");
+    int res1 = adicionarHashItem(&hash, q1, getCep(q1));
+    int res2 = adicionarHashItem(&hash, q2, getCep(q2));
+    int res3 = adicionarHashItem(&hash, q3, getCep(q3));
+    int res4 = adicionarHashItem(&hash, q4, getCep(q4));
     printHashFileInfo(hash);
+    Quadra busca = buscarHashItem(hash, getCep(q1));
+    if (busca) {
+        printf("Item encontrado: %s\n", getCep(busca));
+        printQuadra(busca);
+    } else {
+        printf("Item não encontrado\n");
+    }
+
+    busca = buscarHashItem(hash, getCep(q2));
+    if (busca) {
+        printf("Item encontrado: %s\n", getCep(busca));
+        printQuadra(busca);
+    } else {
+        printf("Item não encontrado\n");
+    }
     TEST_ASSERT_NOT_NULL(hash);
+    TEST_ASSERT_NOT_NULL(busca);
 }
 // void test_buscar_item_existente_hash(void) {
 //     hash = criarHashFile("hashfile.dat", 2);

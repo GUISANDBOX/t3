@@ -74,3 +74,10 @@ char* getCstrk(Quadra q) {
     sQuadra* quadra = (sQuadra*)q;
     return quadra->cstrk;
 }
+
+void printQuadra(Quadra q) {
+    sQuadra* quadra = (sQuadra*)q;
+    printf("Quadra: CEP=%s, X=%.2f, Y=%.2f, W=%.2f, H=%.2f, SW=%s, Cfill=%s, Cstrk=%s\n",
+           quadra->cep, quadra->x, quadra->y, quadra->w, quadra->h,
+           quadra->sw, quadra->cfill, quadra->cstrk);
+}

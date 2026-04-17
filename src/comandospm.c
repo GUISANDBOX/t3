@@ -17,7 +17,7 @@ HashFile processaPm(FILE *arqpm, HashFile H) {
         if (comando[0] == 'p') {
             fscanf(arqpm, "%s %s %s %c %s", cpf, nome, sobrenome, &sexo, nasc);
             Pessoa p = criaPessoa(cpf, nome, sobrenome, sexo, nasc);
-            if(!adicionarHashItem(&H, p)) {
+            if(!adicionarHashItem(&H, p, getCpf(p))) {
                 //printf("Erro ao adicionar item ao hashfile\n");
             }
             printf("Pessoa criada: %s %s %s\n", cpf, nome, sobrenome);
