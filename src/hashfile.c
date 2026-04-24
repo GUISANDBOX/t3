@@ -55,7 +55,9 @@ static int writeBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *b
 }
 
 static int readBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bucket) {
+    printf("readBucketMeta: bucketOffset=%ld\n", bucketOffset);
     if (fseek(hashFile->file, bucketOffset, SEEK_SET) != 0) {
+        printf("Erro: fseek bucketOffset falhou\n");
         return 0;
     }
     return fread(bucket, sizeof(BucketMeta), 1, hashFile->file) == 1;
@@ -70,6 +72,7 @@ static int bucketCapacity(sHashFile *hashFile) {
 }
 
 static long allocateBucketPage(sHashFile *hashFile) {
+    fflush(hashFile->file);
     if (fseek(hashFile->file, 0, SEEK_END) != 0) {
         return -1;
     }
@@ -81,21 +84,25 @@ static int expandDirectory(sHashFile *hashFile) {
     int newNumBuckets = oldNumBuckets << 1;
     long *newDirectory = (long*)malloc((size_t)newNumBuckets * sizeof(long));
     if (!newDirectory) {
+        printf("Erro: malloc falhou para newDirectory\n");
         return 0;
     }
 
     for (int i = 0; i < oldNumBuckets; i++) {
-        newDirectory[2 * i] = hashFile->directory[i];
-        newDirectory[2 * i + 1] = hashFile->directory[i];
+        newDirectory[i] = hashFile->directory[i];
+        newDirectory[i + oldNumBuckets] = hashFile->directory[i];
     }
 
+    fflush(hashFile->file);
     if (fseek(hashFile->file, 0, SEEK_END) != 0) {
+        printf("Erro: fseek END falhou\n");
         free(newDirectory);
         return 0;
     }
 
     long newDirOffset = ftell(hashFile->file);
     if (fwrite(newDirectory, sizeof(long), newNumBuckets, hashFile->file) != (size_t)newNumBuckets) {
+        printf("Erro: fwrite newDirectory falhou\n");
         free(newDirectory);
         return 0;
     }
@@ -109,7 +116,6 @@ static int expandDirectory(sHashFile *hashFile) {
         return 0;
     }
 
-    fflush(hashFile->file);
     free(hashFile->directory);
     hashFile->directory = newDirectory;
     return 1;
@@ -122,8 +128,11 @@ static int writeRecordToBucket(sHashFile *hashFile, HashItem item, int bucketInd
         return 0;
     }
 
+    printf("writeRecordToBucket: bucketIndex=%d, bucketOffset=%ld, numRecords=%d\n", bucketIndex, bucketOffset, bucketMeta.numRecords);
+
     int maxRecords = bucketCapacity(hashFile);
     if (bucketMeta.numRecords >= maxRecords) {
+        printf("Bucket %d cheio, numRecords=%d, max=%d\n", bucketIndex, bucketMeta.numRecords, maxRecords);
         return 0;
     }
 
@@ -141,7 +150,6 @@ static int writeRecordToBucket(sHashFile *hashFile, HashItem item, int bucketInd
         return 0;
     }
 
-    fflush(hashFile->file);
     return 1;
 }
 
@@ -194,12 +202,11 @@ static int splitBucket(sHashFile *hashFile, int bucketIndex) {
         return 0;
     }
 
-    fflush(hashFile->file);
-
     if (oldNumRecords > 0) {
         int recordSize = hashFile->header.recordSize;
         char *buffer = (char*)malloc((size_t)oldNumRecords * recordSize);
         if (!buffer) {
+            printf("Erro: malloc buffer falhou, oldNumRecords=%d, recordSize=%d\n", oldNumRecords, recordSize);
             return 0;
         }
 
@@ -214,15 +221,19 @@ static int splitBucket(sHashFile *hashFile, int bucketIndex) {
             return 0;
         }
 
+        HashFile tempHash = (HashFile)hashFile;
         for (int i = 0; i < oldNumRecords; i++) {
             char *record = buffer + (size_t)i * recordSize;
             char *recordKey = record + hashFile->header.keyOffset;
             int targetBucketIndex = getKey(recordKey, hashFile->header.globalDepth);
+            printf("re-insert i=%d to bucket %d\n", i, targetBucketIndex);
+    
             if (targetBucketIndex < 0 || targetBucketIndex >= hashFile->header.numBuckets) {
                 free(buffer);
                 return 0;
             }
-            if (!writeRecordToBucket(hashFile, record, targetBucketIndex)) {
+            if (!adicionarHashItem(&tempHash, record, recordKey)) {
+                printf("Erro: falha ao re-inserir record i=%d\n", i);
                 free(buffer);
                 return 0;
             }
@@ -409,26 +420,93 @@ int adicionarHashItem(HashFile *hash, HashItem item, char *key){
         }
 
         if (writeRecordToBucket(hashFile, item, bucketIndex)) {
+            fflush(hashFile->file);
             return 1;
         }
 
         long bucketOffset = hashFile->directory[bucketIndex];
         BucketMeta bucketMeta;
         if (!readBucketMeta(hashFile, bucketOffset, &bucketMeta)) {
+            printf("Erro: falha ao ler bucketMeta\n");
             return 0;
         }
 
         if (bucketMeta.localDepth == hashFile->header.globalDepth) {
+            printf("Tentando expandir directory\n");
             if (!expandDirectory(hashFile)) {
+                printf("Erro: falha ao expandir directory\n");
                 return 0;
             }
             continue;
         }
 
+        printf("Tentando split bucket %d\n", bucketIndex);
         if (!splitBucket(hashFile, bucketIndex)) {
+            printf("Erro: falha ao split bucket\n");
             return 0;
         }
     }
+}
+
+int atualizarHashItem(HashFile *hash, HashItem item, char *key) {
+    if (!hash || !*hash || !item || !key) {
+        return 0;
+    }
+
+    sHashFile *hashFile = (sHashFile *)(*hash);
+    if (!hashFile->file) {
+        return 0;
+    }
+
+    int bucketIndex = getKey(key, hashFile->header.globalDepth);
+    if (bucketIndex < 0 || bucketIndex >= hashFile->header.numBuckets) {
+        return 0;
+    }
+
+    long bucketOffset = hashFile->directory[bucketIndex];
+    BucketMeta bucketMeta;
+    if (!readBucketMeta(hashFile, bucketOffset, &bucketMeta)) {
+        return 0;
+    }
+
+    int recordSize = hashFile->header.recordSize;
+    if (recordSize <= 0 || bucketMeta.numRecords <= 0) {
+        return 0;
+    }
+
+    char *record = (char*)malloc(recordSize);
+    if (!record) {
+        return 0;
+    }
+
+    long currentPosition = bucketOffset + sizeof(BucketMeta);
+    size_t keyLength = strlen(key) + 1;
+
+    for (int i = 0; i < bucketMeta.numRecords; i++) {
+        if (fseek(hashFile->file, currentPosition, SEEK_SET) != 0) {
+            break;
+        }
+
+        if (fread(record, recordSize, 1, hashFile->file) != 1) {
+            break;
+        }
+
+        char *recordKey = record + hashFile->header.keyOffset;
+        if (strncmp(recordKey, key, keyLength) == 0) {
+            if (fseek(hashFile->file, currentPosition, SEEK_SET) != 0) {
+                free(record);
+                return 0;
+            }
+            int result = fwrite(item, recordSize, 1, hashFile->file) == 1;
+            free(record);
+            return result;
+        }
+
+        currentPosition += recordSize;
+    }
+
+    free(record);
+    return 0;
 }
 
 HashItem buscarHashItem(HashFile hash, char *key){

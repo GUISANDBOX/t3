@@ -13,3 +13,5 @@ gcc -I include -I unity src/hashfile.c test/hashfile.c unity/unity.c -o run_test
 # Comandos
 
  ./ted -e /mnt/c/Users/reiha/Workspace/t3/examples/t1 -f c1.geo -o /mnt/c/Users/reiha/Workspace/t3/output -q c1/mudanca-todos-moradores-com-verif.qry -pm c1.pm
+
+ examples\t1\c1-mudanca-todos-moradores-com-verif.svg

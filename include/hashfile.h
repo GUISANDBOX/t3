@@ -39,6 +39,13 @@ int adicionarHashItem(HashFile *hash, HashItem item, char *key);
 /// @return o item encontrado ou NULL se não encontrado 
 HashItem buscarHashItem(HashFile hash, char *key);
 
+/// @brief Atualiza um item existente no hashfile pela chave
+/// @param hash hashfile onde o item será atualizado
+/// @param item item atualizado
+/// @param key chave usada para buscar o item
+/// @return 1 se o item foi atualizado com sucesso, 0 caso contrário
+int atualizarHashItem(HashFile *hash, HashItem item, char *key);
+
 /// @brief Destrói o hashfile, liberando os recursos alocados 
 /// @param hash hashfile a ser destruído
 void destruirHashFile(HashFile hash);

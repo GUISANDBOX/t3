@@ -10,6 +10,7 @@ void processaQry(FILE *arqqry, HashFile Hpm, HashFile Hgeo, FILE *arqtxt) {
         z = fscanf(arqqry, " %99s", comando);
         if (z != 1) break;
 
+        printf("Lendo comando QRY: %s\n", comando);
         if (strcmp(comando, "rq") == 0) {
             char cep[10];
             fscanf(arqqry, "%s", cep);

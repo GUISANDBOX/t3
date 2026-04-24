@@ -61,14 +61,50 @@ void test_inserir_item_hash(void) {
     TEST_ASSERT_NOT_NULL(hash);
     TEST_ASSERT_NOT_NULL(busca);
 }
-// void test_buscar_item_existente_hash(void) {
-//     hash = criarHashFile("hashfile.dat", 2);
-//     int item1 = 1234;
-//     int res1 = adicionarHashItem(&hash, &item1);
-//     TEST_ASSERT_EQUAL_INT(1, res1); // Supondo que 1 indica sucesso
-//     HashItem encontrado = buscarHashItem(hash, item1);
-//     TEST_ASSERT_NOT_NULL(encontrado);
-// }
+
+void test_buscar_item_existente_hash(void) {
+
+    printf("\nTESTE DE BUSCA NO HASHFILE QUADRA\n");
+    hash = lerHashFile("hashquadra.hf");
+
+    if (!hash) {
+        printf("Erro ao ler hashfile para teste de busca\n");
+        return;
+    }
+    
+    HashItem encontrado = buscarHashItem(hash, "b01.1");
+    printQuadra((Quadra)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+
+    encontrado = buscarHashItem(hash, "b08.10");
+    printQuadra((Quadra)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+
+    encontrado = buscarHashItem(hash, "b010.10");
+    printQuadra((Quadra)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+
+
+    printf("\nTESTE DE BUSCA NO HASHFILE PESSOA\n");
+    hash = lerHashFile("hashpessoa.hf");
+
+    if (!hash) {
+        printf("Erro ao ler hashfile para teste de busca\n");
+        return;
+    }
+    
+    encontrado = buscarHashItem(hash, "000.000.001-91");
+    printPessoa((Pessoa)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+
+    encontrado = buscarHashItem(hash, "000.006.441-61");
+    printPessoa((Pessoa)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+
+    encontrado = buscarHashItem(hash, "000.007.501-90");
+    printPessoa((Pessoa)encontrado);
+    TEST_ASSERT_NOT_NULL(encontrado);
+}
 
 // void test_buscar_item_inexistente_hash(void) {
 //     hash = criarHashFile("hashfile.dat", 2);
@@ -87,7 +123,7 @@ int main(void) {
     RUN_TEST(test_tamanho_struct);
     RUN_TEST(test_inicializacao_hash_d2);
     RUN_TEST(test_inserir_item_hash);
-    // RUN_TEST(test_buscar_item_existente_hash);
+    RUN_TEST(test_buscar_item_existente_hash);
     // RUN_TEST(test_buscar_item_inexistente_hash);
     return UNITY_END();
 }

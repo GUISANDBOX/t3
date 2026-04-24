@@ -137,10 +137,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    HashFile hashQuadra = criarHashFile("hashquadra.hf", tamanhoQuadra(), 2048);
+    HashFile hashQuadra = criarHashFile("hashquadra.hf", tamanhoQuadra(), 16384);
     processaGeo(arqgeo, hashQuadra);
+    printHashFileInfo(hashQuadra);
 
-    HashFile hashPessoa = criarHashFile("hashpessoa.hf", tamanhoPessoa(), 2048);
+    HashFile hashPessoa = criarHashFile("hashpessoa.hf", tamanhoPessoa(), 16384);
     if (tempm) {
         char dirpm[PATH_LEN];
         strcpy(dirpm, bed);
@@ -153,10 +154,11 @@ int main(int argc, char *argv[]) {
         }
         processaPm(arqpm_file, hashPessoa);
         fclose(arqpm_file);
+        printHashFileInfo(hashPessoa);
     }
 
-    printHashFileInfo(hashQuadra);
-    printHashFileInfo(hashPessoa);
+    
+    
 
     fclose(arqgeo);
     fclose(arqnovo);
@@ -193,13 +195,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     printf("Criando SVG %s \n", dirsaidabase);
-    printf("Criando TXT %s \n", dirsaidabaseaux);
     FILE *filesaidaquery = fopen(dirsaidabase, "w+");
+    
+    printf("Criando TXT %s \n", dirsaidabaseaux);
     FILE *filesaidatxt = fopen(dirsaidabaseaux, "w+");
+    
+    printf("Lendo QRY %s \n", bed);
     processaQry(fileq, hashPessoa, hashQuadra, filesaidatxt);
-
-    destruirHashFile(&hashQuadra);
-    destruirHashFile(&hashPessoa);
     
     fclose(fileq);
     fclose(filesaidaquery);
