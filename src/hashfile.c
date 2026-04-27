@@ -1,4 +1,4 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hashfile.h"
@@ -24,43 +24,77 @@ typedef struct {
     Header header;
     long *directory;
     FILE *file;
+    FILE *hdrFile;
 } sHashFile;
 
 static int writeHeader(sHashFile *hashFile) {
-    if (fseek(hashFile->file, 0, SEEK_SET) != 0) {
+    if (fseek(hashFile->hdrFile, 0, SEEK_SET) != 0) {
         return 0;
     }
-    return fwrite(&hashFile->header, sizeof(Header), 1, hashFile->file) == 1;
+    if (fwrite(&hashFile->header, sizeof(Header), 1, hashFile->hdrFile) != 1) {
+        return 0;
+    }
+    fflush(hashFile->hdrFile);
+    return 1;
 }
 
 static int writeDirectory(sHashFile *hashFile) {
-    if (fseek(hashFile->file, hashFile->header.directoryOffset, SEEK_SET) != 0) {
+    if (fseek(hashFile->hdrFile, hashFile->header.directoryOffset, SEEK_SET) != 0) {
         return 0;
     }
-    return fwrite(hashFile->directory, sizeof(long), hashFile->header.numBuckets, hashFile->file) == (size_t)hashFile->header.numBuckets;
+    if (fwrite(hashFile->directory, sizeof(long), hashFile->header.numBuckets, hashFile->hdrFile) != (size_t)hashFile->header.numBuckets) {
+        return 0;
+    }
+    fflush(hashFile->hdrFile);
+    return 1;
 }
 
 static int readDirectory(sHashFile *hashFile) {
-    if (fseek(hashFile->file, hashFile->header.directoryOffset, SEEK_SET) != 0) {
+    if (fseek(hashFile->hdrFile, hashFile->header.directoryOffset, SEEK_SET) != 0) {
         return 0;
     }
-    return fread(hashFile->directory, sizeof(long), hashFile->header.numBuckets, hashFile->file) == (size_t)hashFile->header.numBuckets;
+    return fread(hashFile->directory, sizeof(long), hashFile->header.numBuckets, hashFile->hdrFile) == (size_t)hashFile->header.numBuckets;
 }
 
 static int writeBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bucket) {
+    printf("writeBucketMeta: bucketOffset=%ld, numRecords=%d, localDepth=%d\n", bucketOffset, bucket->numRecords, bucket->localDepth);
     if (fseek(hashFile->file, bucketOffset, SEEK_SET) != 0) {
         return 0;
     }
-    return fwrite(bucket, sizeof(BucketMeta), 1, hashFile->file) == 1;
+    if (fwrite(bucket, sizeof(BucketMeta), 1, hashFile->file) != 1) {
+        return 0;
+    }
+    fflush(hashFile->file);
+    return 1;
 }
 
 static int readBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bucket) {
     printf("readBucketMeta: bucketOffset=%ld\n", bucketOffset);
+    long current_pos = ftell(hashFile->file);
+    fseek(hashFile->file, 0, SEEK_END);
+    long file_size = ftell(hashFile->file);
+    fseek(hashFile->file, current_pos, SEEK_SET);
+    if (bucketOffset + (long)sizeof(BucketMeta) > file_size) {
+        printf("readBucketMeta: bucketOffset %ld beyond file_size %ld\n", bucketOffset, file_size);
+        return 0;
+    }
     if (fseek(hashFile->file, bucketOffset, SEEK_SET) != 0) {
         printf("Erro: fseek bucketOffset falhou\n");
         return 0;
     }
-    return fread(bucket, sizeof(BucketMeta), 1, hashFile->file) == 1;
+    if (fread(bucket, sizeof(BucketMeta), 1, hashFile->file) != 1) {
+        printf("Erro: fread bucketMeta falhou\n");
+        return 0;
+    }
+    printf("readBucketMeta: numRecords=%d, localDepth=%d\n", bucket->numRecords, bucket->localDepth);
+    if (bucket->numRecords < 0 || bucket->numRecords > 1000) {
+        printf("readBucketMeta: numRecords invalido %d, inicializando\n", bucket->numRecords);
+        bucket->numRecords = 0;
+        bucket->localDepth = hashFile->header.globalDepth;
+        bucket->nextBucket = -1;
+        writeBucketMeta(hashFile, bucketOffset, bucket);
+    }
+    return 1;
 }
 
 static int bucketCapacity(sHashFile *hashFile) {
@@ -68,7 +102,9 @@ static int bucketCapacity(sHashFile *hashFile) {
     if (available <= 0 || hashFile->header.recordSize <= 0) {
         return 0;
     }
-    return available / hashFile->header.recordSize;
+    int capacity = available / hashFile->header.recordSize;
+    printf("bucketCapacity: bucketSize=%d, recordSize=%d, available=%d, capacity=%d\n", hashFile->header.bucketSize, hashFile->header.recordSize, available, capacity);
+    return capacity;
 }
 
 static long allocateBucketPage(sHashFile *hashFile) {
@@ -76,7 +112,20 @@ static long allocateBucketPage(sHashFile *hashFile) {
     if (fseek(hashFile->file, 0, SEEK_END) != 0) {
         return -1;
     }
-    return ftell(hashFile->file);
+    long offset = ftell(hashFile->file);
+    
+    if (fseek(hashFile->file, offset + hashFile->header.bucketSize - 1, SEEK_SET) == 0) {
+        char zero = 0;
+        fwrite(&zero, 1, 1, hashFile->file);
+    }
+
+    // Initialize the new bucket meta
+    BucketMeta newBucket = { .localDepth = hashFile->header.globalDepth, .numRecords = 0, .nextBucket = -1 };
+    if (!writeBucketMeta(hashFile, offset, &newBucket)) {
+        printf("Erro: writeBucketMeta falhou para novo bucket\n");
+        return -1;
+    }
+    return offset;
 }
 
 static int expandDirectory(sHashFile *hashFile) {
@@ -93,28 +142,27 @@ static int expandDirectory(sHashFile *hashFile) {
         newDirectory[i + oldNumBuckets] = hashFile->directory[i];
     }
 
-    fflush(hashFile->file);
-    if (fseek(hashFile->file, 0, SEEK_END) != 0) {
-        printf("Erro: fseek END falhou\n");
-        free(newDirectory);
-        return 0;
-    }
-
-    long newDirOffset = ftell(hashFile->file);
-    if (fwrite(newDirectory, sizeof(long), newNumBuckets, hashFile->file) != (size_t)newNumBuckets) {
-        printf("Erro: fwrite newDirectory falhou\n");
-        free(newDirectory);
-        return 0;
-    }
-
     hashFile->header.globalDepth++;
     hashFile->header.numBuckets = newNumBuckets;
-    hashFile->header.directoryOffset = newDirOffset;
+    // directoryOffset continua sendo o mesmo em hdrFile
 
     if (!writeHeader(hashFile)) {
         free(newDirectory);
         return 0;
     }
+
+    if (fseek(hashFile->hdrFile, hashFile->header.directoryOffset, SEEK_SET) != 0) {
+        printf("Erro: fseek END falhou\n");
+        free(newDirectory);
+        return 0;
+    }
+
+    if (fwrite(newDirectory, sizeof(long), newNumBuckets, hashFile->hdrFile) != (size_t)newNumBuckets) {
+        printf("Erro: fwrite newDirectory falhou\n");
+        free(newDirectory);
+        return 0;
+    }
+    fflush(hashFile->hdrFile);
 
     free(hashFile->directory);
     hashFile->directory = newDirectory;
@@ -246,6 +294,24 @@ static int splitBucket(sHashFile *hashFile, int bucketIndex) {
 }
 
 HashFile criarHashFile(char *nome, int recordSize, int bucketSize) {
+    printf("criarHashFile: recordSize=%d, bucketSize=%d\n", recordSize, bucketSize);
+    
+    char hdrName[256];
+    strcpy(hdrName, nome);
+    char *dot = strrchr(hdrName, '.');
+    if (dot) {
+        strcpy(dot, ".hfc");
+    } else {
+        strcat(hdrName, ".hfc");
+    }
+    
+    if (remove(nome) != 0) {
+        printf("Erro: remove falhou para %s\n", nome);
+    }
+    if (remove(hdrName) != 0) {
+        // pode falhar se não existir, normal
+    }
+    
     int d = 1;
     int numBuckets = 1 << d;
     Header header = {
@@ -254,7 +320,7 @@ HashFile criarHashFile(char *nome, int recordSize, int bucketSize) {
         .numBuckets = numBuckets,
         .bucketSize = bucketSize,
         .directoryOffset = sizeof(Header),
-        .bucketDataOffset = sizeof(Header) + numBuckets * sizeof(long),
+        .bucketDataOffset = 0, // Os buckets começam no início do arquivo de dados
         .keyOffset = 0,
         .keySize = 0
     };
@@ -286,33 +352,50 @@ HashFile criarHashFile(char *nome, int recordSize, int bucketSize) {
         return NULL;
     }
 
-    if (fwrite(&hashFile->header, sizeof(Header), 1, hashFile->file) != 1) {
+    hashFile->hdrFile = fopen(hdrName, "wb+");
+    if (!hashFile->hdrFile) {
         fclose(hashFile->file);
         free(hashFile->directory);
         free(hashFile);
         return NULL;
     }
 
-    if (fwrite(hashFile->directory, sizeof(long), numBuckets, hashFile->file) != (size_t)numBuckets) {
+    if (fwrite(&hashFile->header, sizeof(Header), 1, hashFile->hdrFile) != 1) {
         fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
         free(hashFile->directory);
         free(hashFile);
         return NULL;
     }
+
+    if (fwrite(hashFile->directory, sizeof(long), numBuckets, hashFile->hdrFile) != (size_t)numBuckets) {
+        fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
+        free(hashFile->directory);
+        free(hashFile);
+        return NULL;
+    }
+    fflush(hashFile->hdrFile);
 
     BucketMeta bucket = {
         .localDepth = d,
         .numRecords = 0,
-        .nextBucket = 0
+        .nextBucket = -1
     };
 
     for (int i = 0; i < numBuckets; i++) {
         if (!writeBucketMeta(hashFile, hashFile->directory[i], &bucket)) {
             fclose(hashFile->file);
+            fclose(hashFile->hdrFile);
             free(hashFile->directory);
             free(hashFile);
             return NULL;
         }
+    }
+
+    if (fseek(hashFile->file, (long)numBuckets * bucketSize - 1, SEEK_SET) == 0) {
+        char zero = 0;
+        fwrite(&zero, 1, 1, hashFile->file);
     }
 
     fflush(hashFile->file);
@@ -331,14 +414,33 @@ HashFile lerHashFile(char *file_name) {
         return NULL;
     }
 
-    if (fread(&hashFile->header, sizeof(Header), 1, hashFile->file) != 1) {
+    char hdrName[256];
+    strcpy(hdrName, file_name);
+    char *dot = strrchr(hdrName, '.');
+    if (dot) {
+        strcpy(dot, ".hfc");
+    } else {
+        strcat(hdrName, ".hfc");
+    }
+    hashFile->hdrFile = fopen(hdrName, "rb+");
+    if (!hashFile->hdrFile) {
         fclose(hashFile->file);
         free(hashFile);
         return NULL;
     }
 
+    if (fread(&hashFile->header, sizeof(Header), 1, hashFile->hdrFile) != 1) {
+        fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
+        free(hashFile);
+        return NULL;
+    }
+
+    printf("lerHashFile: recordSize=%d, bucketSize=%d, numBuckets=%d\n", hashFile->header.recordSize, hashFile->header.bucketSize, hashFile->header.numBuckets);
+
     if (hashFile->header.numBuckets <= 0) {
         fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
         free(hashFile);
         return NULL;
     }
@@ -346,12 +448,14 @@ HashFile lerHashFile(char *file_name) {
     hashFile->directory = (long*)malloc((size_t)hashFile->header.numBuckets * sizeof(long));
     if (!hashFile->directory) {
         fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
         free(hashFile);
         return NULL;
     }
 
     if (!readDirectory(hashFile)) {
         fclose(hashFile->file);
+        fclose(hashFile->hdrFile);
         free(hashFile->directory);
         free(hashFile);
         return NULL;
@@ -539,21 +643,28 @@ HashItem buscarHashItem(HashFile hash, char *key){
     if (!record) {
         return NULL;
     }
+    printf("buscarHashItem: malloc ok, recordSize=%d\n", recordSize);
 
     long currentPosition = bucketOffset + sizeof(BucketMeta);
     size_t keyLength = strlen(key) + 1;
 
     for (int i = 0; i < bucketMeta.numRecords; i++) {
+        printf("buscarHashItem: i=%d, currentPosition=%ld\n", i, currentPosition);
         if (fseek(hashFile->file, currentPosition, SEEK_SET) != 0) {
+            printf("buscarHashItem: fseek failed\n");
             break;
         }
 
         if (fread(record, recordSize, 1, hashFile->file) != 1) {
+            printf("buscarHashItem: fread failed\n");
             break;
         }
+        printf("buscarHashItem: fread ok\n");
 
         char *recordKey = record + hashFile->header.keyOffset;
+        printf("recordKey: %.10s\n", recordKey);
         if (strncmp(recordKey, key, keyLength) == 0) {
+            printf("buscarHashItem: found key %s\n", key);
             return (HashItem)record;
         }
 
@@ -572,6 +683,9 @@ void destruirHashFile(HashFile hash){
     }
     if (hashFile->file) {
         fclose(hashFile->file);
+    }
+    if (hashFile->hdrFile) {
+        fclose(hashFile->hdrFile);
     }
     free(hashFile);
 }

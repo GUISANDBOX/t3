@@ -62,8 +62,8 @@ void test_inserir_item_hash(void) {
     TEST_ASSERT_NOT_NULL(busca);
 }
 
-void test_buscar_item_existente_hash(void) {
-
+void test_buscar_quadra_existente_hash(void) {
+    HashItem encontrado;
     printf("\nTESTE DE BUSCA NO HASHFILE QUADRA\n");
     hash = lerHashFile("hashquadra.hf");
 
@@ -72,18 +72,23 @@ void test_buscar_item_existente_hash(void) {
         return;
     }
     
-    HashItem encontrado = buscarHashItem(hash, "b01.1");
-    printQuadra((Quadra)encontrado);
+    encontrado = buscarHashItem(hash, "b01.1");
+    if (encontrado) printQuadra((Quadra)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 
-    encontrado = buscarHashItem(hash, "b08.10");
-    printQuadra((Quadra)encontrado);
+    encontrado = buscarHashItem(hash, "b03.10");
+    if (encontrado) printQuadra((Quadra)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 
     encontrado = buscarHashItem(hash, "b010.10");
-    printQuadra((Quadra)encontrado);
+    if (encontrado) printQuadra((Quadra)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 
+}
+
+
+void test_buscar_pessoa_existente_hash(void) {
+    HashItem encontrado;
 
     printf("\nTESTE DE BUSCA NO HASHFILE PESSOA\n");
     hash = lerHashFile("hashpessoa.hf");
@@ -92,19 +97,23 @@ void test_buscar_item_existente_hash(void) {
         printf("Erro ao ler hashfile para teste de busca\n");
         return;
     }
+    else {
+        printHashFileInfo(hash);
+    }
     
     encontrado = buscarHashItem(hash, "000.000.001-91");
-    printPessoa((Pessoa)encontrado);
+    if (encontrado) printPessoa((Pessoa)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 
-    encontrado = buscarHashItem(hash, "000.006.441-61");
-    printPessoa((Pessoa)encontrado);
+    encontrado = buscarHashItem(hash, "000.000.011-63");
+    if (encontrado) printPessoa((Pessoa)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 
-    encontrado = buscarHashItem(hash, "000.007.501-90");
-    printPessoa((Pessoa)encontrado);
+    encontrado = buscarHashItem(hash, "000.006.601-08");
+    if (encontrado) printPessoa((Pessoa)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 }
+
 
 // void test_buscar_item_inexistente_hash(void) {
 //     hash = criarHashFile("hashfile.dat", 2);
@@ -123,7 +132,8 @@ int main(void) {
     RUN_TEST(test_tamanho_struct);
     RUN_TEST(test_inicializacao_hash_d2);
     RUN_TEST(test_inserir_item_hash);
-    RUN_TEST(test_buscar_item_existente_hash);
+    RUN_TEST(test_buscar_quadra_existente_hash);
+    RUN_TEST(test_buscar_pessoa_existente_hash);
     // RUN_TEST(test_buscar_item_inexistente_hash);
     return UNITY_END();
 }

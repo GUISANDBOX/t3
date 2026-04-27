@@ -15,7 +15,7 @@ struct sPessoa {
     char sobrenome[100];
     char sexo;
     char nascimento[11];
-    char temMoradia;
+    int temMoradia;
     struct sMoradia moradia;
 };
 
