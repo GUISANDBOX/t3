@@ -85,6 +85,17 @@ void atribuirMoradia(Pessoa p, const char *cep, char face, int num, const char *
     pessoa->moradia.complemento[sizeof(pessoa->moradia.complemento) - 1] = '\0';
 }
 
+void removerMoradia(Pessoa p) {
+    if (!p) return;
+    sPessoa* pessoa = (sPessoa*)p;
+    pessoa->temMoradia = 0;
+    pessoa->moradia.cep[0] = '\0';
+    pessoa->moradia.face = '\0';
+    pessoa->moradia.num = 0;
+    pessoa->moradia.complemento[0] = '\0';
+}
+
+
 int temMoradia(Pessoa p) {
     if (!p) return 0;
     sPessoa* pessoa = (sPessoa*)p;

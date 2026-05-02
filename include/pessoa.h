@@ -21,6 +21,7 @@ char* getNascimento(Pessoa p);
 
 // moradia
 void atribuirMoradia(Pessoa p, const char *cep, char face, int num, const char *complemento);
+void removerMoradia(Pessoa p);
 int temMoradia(Pessoa p);
 char* getMoradiaCep(Pessoa p);
 char getMoradiaFace(Pessoa p);

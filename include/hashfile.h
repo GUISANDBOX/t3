@@ -46,15 +46,22 @@ HashItem buscarHashItem(HashFile hash, char *key);
 /// @return 1 se o item foi atualizado com sucesso, 0 caso contrário
 int atualizarHashItem(HashFile *hash, HashItem item, char *key);
 
-/// @brief Destrói o hashfile, liberando os recursos alocados 
-/// @param hash hashfile a ser destruído
-void destruirHashFile(HashFile hash);
-
 /// @brief Função hash simples para strings
 /// @param str string a ser hasheada
 /// @return valor hash
 int hashString(char *str);
 
 void printHashFileInfo(HashFile hash);
+
+/// @brief Remove um item do hashfile pela chave
+/// @param hash hashfile onde o item será removido
+/// @param key chave usada para buscar o item
+void removerHashItem(HashFile hash, char *key);
+
+/// @brief Retorna uma lista de todos os itens do hashfile
+/// @param hash hashfile a ser consultado
+/// @param itens array de ponteiros para receber os itens
+/// @return número de itens
+int getListaItens(HashFile hash, HashItem *itens);
 
 #endif

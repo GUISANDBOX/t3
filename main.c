@@ -122,7 +122,6 @@ int main(int argc, char *argv[]) {
     }
 
     strcat(dir,"/");strcat(dir,arq);
-    // TODO - fazer com que o nome do arquivo svg seja o nome do arquivo geo com extensão .svg
     char arquivoSVGArena[FILE_NAME_LEN];
     strcpy(arquivoSVGArena, getNomeArquivoSemExtensao(arq));
     strcat(arquivoSVGArena, ".svg");
@@ -138,7 +137,8 @@ int main(int argc, char *argv[]) {
     }
     
     HashFile hashQuadra = criarHashFile("hashquadra.hf", tamanhoQuadra(), 16384);
-    processaGeo(arqgeo, hashQuadra);
+
+    processaGeo(arqgeo, hashQuadra, arqnovo);
     printHashFileInfo(hashQuadra);
 
     HashFile hashPessoa = criarHashFile("hashpessoa.hf", tamanhoPessoa(), 16384);
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
     FILE *filesaidatxt = fopen(dirsaidabaseaux, "w+");
     
     printf("Lendo QRY %s \n", bed);
-    processaQry(fileq, hashPessoa, hashQuadra, filesaidatxt);
+    processaQry(fileq, hashPessoa, hashQuadra, filesaidatxt, filesaidaquery);
     
     fclose(fileq);
     fclose(filesaidaquery);

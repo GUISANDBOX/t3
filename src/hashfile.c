@@ -675,25 +675,124 @@ HashItem buscarHashItem(HashFile hash, char *key){
     return NULL;
 }
 
-void destruirHashFile(HashFile hash){
-    if (!hash) return;
-    sHashFile* hashFile = (sHashFile*)hash;
-    if (hashFile->directory) {
-        free(hashFile->directory);
-    }
-    if (hashFile->file) {
-        fclose(hashFile->file);
-    }
-    if (hashFile->hdrFile) {
-        fclose(hashFile->hdrFile);
-    }
-    free(hashFile);
-}
-
 int hashString(char *str) {
     int hash = 0;
     while (*str) {
         hash = (hash * 31) + *str++;
     }
     return hash;
+}
+
+void removerHashItem(HashFile hash, char *key){
+    if (!hash || !key) {
+        return;
+    }
+
+    sHashFile* hashFile = (sHashFile*)hash;
+    if (!hashFile->file) {
+        return;
+    }
+
+    int bucketIndex = getKey(key, hashFile->header.globalDepth);
+    if (bucketIndex < 0 || bucketIndex >= hashFile->header.numBuckets) {
+        return;
+    }
+
+    long bucketOffset = hashFile->directory[bucketIndex];
+    BucketMeta bucketMeta;
+    if (!readBucketMeta(hashFile, bucketOffset, &bucketMeta)) {
+        return;
+    }
+
+    int recordSize = hashFile->header.recordSize;
+    if (recordSize <= 0 || bucketMeta.numRecords <= 0) {
+        return;
+    }
+
+    char *record = (char*)malloc(recordSize);
+    if (!record) {
+        return;
+    }
+    printf("removerHashItem: malloc ok, recordSize=%d\n", recordSize);
+
+    long currentPosition = bucketOffset + sizeof(BucketMeta);
+    size_t keyLength = strlen(key) + 1;
+
+    for (int i = 0; i < bucketMeta.numRecords; i++) {
+        printf("removerHashItem: i=%d, currentPosition=%ld\n", i, currentPosition);
+        if (fseek(hashFile->file, currentPosition, SEEK_SET) != 0) {
+            printf("removerHashItem: fseek failed\n");
+            break;
+        }
+
+        if (fread(record, recordSize, 1, hashFile->file) != 1) {
+            printf("removerHashItem: fread failed\n");
+            break;
+        }
+        printf("removerHashItem: fread ok\n");
+
+        char *recordKey = record + hashFile->header.keyOffset;
+        printf("recordKey: %.10s\n", recordKey);
+        if (strncmp(recordKey, key, keyLength) == 0) {
+            printf("removerHashItem: found key %s\n", key);
+            
+            if (i < bucketMeta.numRecords - 1) {
+                // Lê o último registro
+                long lastPosition = bucketOffset + sizeof(BucketMeta) + (bucketMeta.numRecords - 1) * recordSize;
+                char *lastRecord = (char*)malloc(recordSize);
+                fseek(hashFile->file, lastPosition, SEEK_SET);
+                fread(lastRecord, recordSize, 1, hashFile->file);
+                
+                // Sobrescreve o registro atual com o último
+                fseek(hashFile->file, currentPosition, SEEK_SET);
+                fwrite(lastRecord, recordSize, 1, hashFile->file);
+                free(lastRecord);
+            }
+
+            // Atualiza o bucketMeta
+            bucketMeta.numRecords--;
+            fseek(hashFile->file, bucketOffset, SEEK_SET);
+            fwrite(&bucketMeta, sizeof(BucketMeta), 1, hashFile->file);
+            fflush(hashFile->file);
+            
+            break;
+        }
+
+        currentPosition += recordSize;
+    }
+
+    free(record);
+}
+
+int getListaItens(HashFile hash, HashItem *itens) {
+    if (!hash || !itens) return 0;
+    sHashFile* hashFile = (sHashFile*)hash;
+    if (!hashFile->file) return 0;
+
+    int count = 0;
+    for (int i = 0; i < hashFile->header.numBuckets; i++) {
+        // avoid duplicate buckets
+        int isDuplicate = 0;
+        for (int j = 0; j < i; j++) {
+            if (hashFile->directory[j] == hashFile->directory[i]) {
+                isDuplicate = 1;
+                break;
+            }
+        }
+        if (isDuplicate) continue;
+
+        long bucketOffset = hashFile->directory[i];
+        BucketMeta bucketMeta;
+        if (!readBucketMeta(hashFile, bucketOffset, &bucketMeta)) continue;
+
+        long currentPosition = bucketOffset + sizeof(BucketMeta);
+        for (int k = 0; k < bucketMeta.numRecords; k++) {
+            char *record = malloc(hashFile->header.recordSize);
+            fseek(hashFile->file, currentPosition, SEEK_SET);
+            fread(record, hashFile->header.recordSize, 1, hashFile->file);
+            itens[count++] = (HashItem)record;
+            currentPosition += hashFile->header.recordSize;
+        }
+    }
+    return count;
 }

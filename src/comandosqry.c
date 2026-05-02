@@ -1,10 +1,28 @@
 #include "comandosqry.h"
 #include <string.h>
 #include <stdio.h>
+#include "criasvg.h"
+#include "hashfile.h"
+#include "quadra.h"
+#include "pessoa.h"
+#include <stdlib.h>
 
-void processaQry(FILE *arqqry, HashFile Hpm, HashFile Hgeo, FILE *arqtxt) {
+void processaQry(FILE *arqqry, HashFile Hpm, HashFile Hgeo, FILE *arqtxt, FILE *arqsvg) {
     char comando[100];
     int z;
+
+    fprintf(arqsvg, "<svg width=\"5000\" height=\"5000\" xmlns=\"http://www.w3.org/2000/svg\">\n");
+
+    // Desenha todas as quadras da base antes de processar o QRY
+    // HashItem *listaQuadras = malloc(100000 * sizeof(HashItem));
+    // int numQuadras = getListaItens(Hgeo, listaQuadras);
+    // for (int i = 0; i < numQuadras; i++) {
+    //     Quadra q = (Quadra)listaQuadras[i];
+    //     desenhaSVGQuadra(q, arqsvg);
+    //     free(q); // getListaItens aloca memoria para cada registro retornado
+    // }
+    // free(listaQuadras);
+
 
     do {
         z = fscanf(arqqry, " %99s", comando);
@@ -14,8 +32,28 @@ void processaQry(FILE *arqqry, HashFile Hpm, HashFile Hgeo, FILE *arqtxt) {
         if (strcmp(comando, "rq") == 0) {
             char cep[10];
             fscanf(arqqry, "%s", cep);
-            // Implementar remoção da quadra com cep
-            fprintf(arqtxt, "Remover quadra %s\n", cep);
+            Quadra q = buscarHashItem(Hgeo, cep);
+            if (!q) {
+                fprintf(arqtxt, "Quadra %s não encontrada\n", cep);
+            } else {
+                removerHashItem(Hgeo, cep);
+                desenhaXvermelho(q, arqsvg);
+                fprintf(arqtxt, "Removendo quadra %s\n", cep);
+                
+                // Remove a moradia das pessoas que moravam nessa quadra
+                HashItem *listaPessoas = malloc(100000 * sizeof(HashItem));
+                int numPessoas = getListaItens(Hpm, listaPessoas);
+                for (int i = 0; i < numPessoas; i++) {
+                    Pessoa p = (Pessoa)listaPessoas[i];
+                    if (temMoradia(p) && strcmp(getMoradiaCep(p), cep) == 0) {
+                        removerMoradia(p);
+                        atualizarHashItem(&Hpm, p, getCpf(p));
+                        fprintf(arqtxt, "CPF: %s, Nome: %s %s atingido\n", getCpf(p), getNome(p), getSobrenome(p));
+                    }
+                    free(p);
+                }
+                free(listaPessoas);
+            }
         }
         else if (strcmp(comando, "pq") == 0) {
             char cep[10];
@@ -59,4 +97,13 @@ void processaQry(FILE *arqqry, HashFile Hpm, HashFile Hgeo, FILE *arqtxt) {
             fprintf(arqtxt, "Despejar pessoa CPF %s\n", cpf);
         }
     } while (1);
+    HashItem *listaQuadras = malloc(100000 * sizeof(HashItem));
+    int numQuadras = getListaItens(Hgeo, listaQuadras);
+    for (int i = 0; i < numQuadras; i++) {
+        Quadra q = (Quadra)listaQuadras[i];
+        desenhaSVGQuadra(q, arqsvg);
+        free(q); // getListaItens aloca memoria para cada registro retornado
+    }
+    free(listaQuadras);
+    fprintf(arqsvg, "</svg>\n");
 }
