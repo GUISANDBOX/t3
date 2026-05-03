@@ -14,6 +14,9 @@ typedef void *HashFile; // Define o tipo HashFile
 /// @return objeto HashFile
 HashFile criarHashFile(char *nome, int recordSize, int bucketSize);
 
+/// @brief lê um hashfile
+/// @param file_name nome do arquivo
+/// @return objeto HashFile
 HashFile lerHashFile(char *file_name);
 
 /// @brief retorna o número de buckets do hashfile
@@ -51,6 +54,8 @@ int atualizarHashItem(HashFile *hash, HashItem item, char *key);
 /// @return valor hash
 int hashString(char *str);
 
+/// @brief Imprime informações do hashfile
+/// @param hash hashfile a ser consultado
 void printHashFileInfo(HashFile hash);
 
 /// @brief Remove um item do hashfile pela chave

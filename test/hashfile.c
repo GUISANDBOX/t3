@@ -101,7 +101,7 @@ void test_buscar_pessoa_existente_hash(void) {
         printHashFileInfo(hash);
     }
     
-    encontrado = buscarHashItem(hash, "000.000.001-91");
+    encontrado = buscarHashItem(hash, "100.000.225-00");
     if (encontrado) printPessoa((Pessoa)encontrado);
     TEST_ASSERT_NOT_NULL(encontrado);
 

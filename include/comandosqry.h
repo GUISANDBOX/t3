@@ -1,5 +1,6 @@
 #ifndef QRY_H
 #define QRY_H
+#include <stdio.h>
 #include "hashfile.h"
 
 /********** Funções para processar os comandos do arquivo .qry **********/
