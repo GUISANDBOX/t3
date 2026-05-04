@@ -57,7 +57,6 @@ static int readDirectory(sHashFile *hashFile) {
 }
 
 static int writeBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bucket) {
-    printf("writeBucketMeta: bucketOffset=%ld, numRecords=%d, localDepth=%d\n", bucketOffset, bucket->numRecords, bucket->localDepth);
     if (fseek(hashFile->file, bucketOffset, SEEK_SET) != 0) {
         return 0;
     }
@@ -69,7 +68,6 @@ static int writeBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *b
 }
 
 static int readBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bucket) {
-    printf("readBucketMeta: bucketOffset=%ld\n", bucketOffset);
     long current_pos = ftell(hashFile->file);
     fseek(hashFile->file, 0, SEEK_END);
     long file_size = ftell(hashFile->file);
@@ -86,7 +84,6 @@ static int readBucketMeta(sHashFile *hashFile, long bucketOffset, BucketMeta *bu
         printf("Erro: fread bucketMeta falhou\n");
         return 0;
     }
-    printf("readBucketMeta: numRecords=%d, localDepth=%d\n", bucket->numRecords, bucket->localDepth);
     if (bucket->numRecords < 0 || bucket->numRecords > 1000) {
         printf("readBucketMeta: numRecords invalido %d, inicializando\n", bucket->numRecords);
         bucket->numRecords = 0;
@@ -103,7 +100,6 @@ static int bucketCapacity(sHashFile *hashFile) {
         return 0;
     }
     int capacity = available / hashFile->header.recordSize;
-    printf("bucketCapacity: bucketSize=%d, recordSize=%d, available=%d, capacity=%d\n", hashFile->header.bucketSize, hashFile->header.recordSize, available, capacity);
     return capacity;
 }
 
@@ -175,8 +171,6 @@ static int writeRecordToBucket(sHashFile *hashFile, HashItem item, int bucketInd
     if (!readBucketMeta(hashFile, bucketOffset, &bucketMeta)) {
         return 0;
     }
-
-    printf("writeRecordToBucket: bucketIndex=%d, bucketOffset=%ld, numRecords=%d\n", bucketIndex, bucketOffset, bucketMeta.numRecords);
 
     int maxRecords = bucketCapacity(hashFile);
     if (bucketMeta.numRecords >= maxRecords) {
@@ -294,7 +288,6 @@ static int splitBucket(sHashFile *hashFile, int bucketIndex) {
 }
 
 HashFile criarHashFile(char *nome, int recordSize, int bucketSize) {
-    printf("criarHashFile: recordSize=%d, bucketSize=%d\n", recordSize, bucketSize);
     
     char hdrName[256];
     strcpy(hdrName, nome);
@@ -641,7 +634,6 @@ HashItem buscarHashItem(HashFile hash, char *key){
     if (!record) {
         return NULL;
     }
-    printf("buscarHashItem: malloc ok, recordSize=%d\n", recordSize);
 
     long currentPosition = bucketOffset + sizeof(BucketMeta);
     size_t keyLength = strlen(key) + 1;
@@ -657,12 +649,9 @@ HashItem buscarHashItem(HashFile hash, char *key){
             printf("buscarHashItem: fread failed\n");
             break;
         }
-        printf("buscarHashItem: fread ok\n");
 
         char *recordKey = record + hashFile->header.keyOffset;
-        printf("recordKey: %.10s\n", recordKey);
         if (strncmp(recordKey, key, keyLength) == 0) {
-            printf("buscarHashItem: found key %s\n", key);
             return (HashItem)record;
         }
 
@@ -711,7 +700,6 @@ void removerHashItem(HashFile hash, char *key){
     if (!record) {
         return;
     }
-    printf("removerHashItem: malloc ok, recordSize=%d\n", recordSize);
 
     long currentPosition = bucketOffset + sizeof(BucketMeta);
     size_t keyLength = strlen(key) + 1;
@@ -727,12 +715,9 @@ void removerHashItem(HashFile hash, char *key){
             printf("removerHashItem: fread failed\n");
             break;
         }
-        printf("removerHashItem: fread ok\n");
 
         char *recordKey = record + hashFile->header.keyOffset;
-        printf("recordKey: %.10s\n", recordKey);
         if (strncmp(recordKey, key, keyLength) == 0) {
-            printf("removerHashItem: found key %s\n", key);
             
             if (i < bucketMeta.numRecords - 1) {
                 // Lê o último registro

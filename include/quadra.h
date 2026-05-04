@@ -23,7 +23,9 @@ char* getCfill(Quadra q);
 char* getCstrk(Quadra q);
 
 size_t tamanhoQuadra(void);
+//retorna o tamanho da quadra
 
 void printQuadra(Quadra q);
+//imprime a quadra no formato
 
 #endif
