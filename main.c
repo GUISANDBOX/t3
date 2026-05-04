@@ -116,6 +116,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    char arqHashQuadra[PATH_LEN + FILE_NAME_LEN];
+    snprintf(arqHashQuadra, sizeof(arqHashQuadra), "%s/hashquadra.hf", dirsaida);
+
+    char arqHashPessoa[PATH_LEN + FILE_NAME_LEN];
+    snprintf(arqHashPessoa, sizeof(arqHashPessoa), "%s/hashpessoa.hf", dirsaida);
+
     if (!teme) {
         strcpy(dir, ".");
         strcpy(bed, ".");
@@ -136,12 +142,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    HashFile hashQuadra = criarHashFile("hashquadra.hf", tamanhoQuadra(), 16384);
+    HashFile hashQuadra = criarHashFile(arqHashQuadra, tamanhoQuadra(), 16384);
 
     processaGeo(arqgeo, hashQuadra, arqnovo);
     printHashFileInfo(hashQuadra);
 
-    HashFile hashPessoa = criarHashFile("hashpessoa.hf", tamanhoPessoa(), 16384);
+    HashFile hashPessoa = criarHashFile(arqHashPessoa, tamanhoPessoa(), 16384);
     if (tempm) {
         char dirpm[PATH_LEN];
         strcpy(dirpm, bed);
@@ -157,15 +163,14 @@ int main(int argc, char *argv[]) {
         printHashFileInfo(hashPessoa);
     }
 
-    
-    
-
     fclose(arqgeo);
     fclose(arqnovo);
     printf("Arquivo SVG criado!\n");
 
     if (!temquery) {
         printf("Nenhum arquivo QRY fornecido. Encerrando.\n");
+        dumpHashFile(hashQuadra, arqHashQuadra);
+        dumpHashFile(hashPessoa, arqHashPessoa);
         return 0;
     }
 
@@ -206,6 +211,10 @@ int main(int argc, char *argv[]) {
     fclose(fileq);
     fclose(filesaidaquery);
     fclose(filesaidatxt);
+    
+    dumpHashFile(hashQuadra, arqHashQuadra);
+    dumpHashFile(hashPessoa, arqHashPessoa);
+    
     printf("Sucesso!\n");
 
     return 0;

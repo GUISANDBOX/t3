@@ -436,8 +436,6 @@ HashFile lerHashFile(char *file_name) {
         return NULL;
     }
 
-    printf("lerHashFile: recordSize=%d, bucketSize=%d, numBuckets=%d\n", hashFile->header.recordSize, hashFile->header.bucketSize, hashFile->header.numBuckets);
-
     if (hashFile->header.numBuckets <= 0) {
         fclose(hashFile->file);
         fclose(hashFile->hdrFile);
@@ -771,7 +769,6 @@ int getListaItens(HashFile hash, HashItem *itens) {
 
     int count = 0;
     for (int i = 0; i < hashFile->header.numBuckets; i++) {
-        // avoid duplicate buckets
         int isDuplicate = 0;
         for (int j = 0; j < i; j++) {
             if (hashFile->directory[j] == hashFile->directory[i]) {
@@ -795,4 +792,85 @@ int getListaItens(HashFile hash, HashItem *itens) {
         }
     }
     return count;
+}
+
+void dumpHashFile(HashFile hash, char *filename) {
+    if (!hash || !filename) return;
+    sHashFile* hashFile = (sHashFile*)hash;
+    if (!hashFile->file) return;
+
+    char outName[256];
+    strcpy(outName, filename);
+    char *dot = strrchr(outName, '.');
+    if (dot) {
+        strcpy(dot, ".hfd");
+    } else {
+        strcat(outName, ".hfd");
+    }
+
+    FILE *fout = fopen(outName, "w");
+    if (!fout) {
+        printf("Erro ao criar arquivo de dump: %s\n", outName);
+        return;
+    }
+
+    fprintf(fout, "=== HEADER ===\n");
+    fprintf(fout, "Global Depth: %d\n", hashFile->header.globalDepth);
+    fprintf(fout, "Record Size: %d\n", hashFile->header.recordSize);
+    fprintf(fout, "Number of Buckets: %d\n", hashFile->header.numBuckets);
+    fprintf(fout, "Bucket Size: %d\n", hashFile->header.bucketSize);
+    fprintf(fout, "Directory Offset: %ld\n", hashFile->header.directoryOffset);
+    fprintf(fout, "Bucket Data Offset: %ld\n", hashFile->header.bucketDataOffset);
+    fprintf(fout, "Key Offset: %d\n", hashFile->header.keyOffset);
+    fprintf(fout, "Key Size: %d\n", hashFile->header.keySize);
+
+    fprintf(fout, "\n=== DIRECTORY ===\n");
+    for (int i = 0; i < hashFile->header.numBuckets; i++) {
+        fprintf(fout, "Dir[%d] = %ld\n", i, hashFile->directory[i]);
+    }
+
+    fprintf(fout, "\n=== BUCKETS ===\n");
+    long *visited = (long*)malloc(sizeof(long) * hashFile->header.numBuckets);
+    int visitedCount = 0;
+
+    for (int i = 0; i < hashFile->header.numBuckets; i++) {
+        long bucketOffset = hashFile->directory[i];
+        
+        int alreadyVisited = 0;
+        for (int j = 0; j < visitedCount; j++) {
+            if (visited[j] == bucketOffset) {
+                alreadyVisited = 1;
+                break;
+            }
+        }
+        
+        if (alreadyVisited) continue;
+        visited[visitedCount++] = bucketOffset;
+
+        BucketMeta bucketMeta;
+        if (readBucketMeta(hashFile, bucketOffset, &bucketMeta)) {
+            fprintf(fout, "\nBucket at Offset %ld:\n", bucketOffset);
+            fprintf(fout, "  Local Depth: %d\n", bucketMeta.localDepth);
+            fprintf(fout, "  Num Records: %d\n", bucketMeta.numRecords);
+            fprintf(fout, "  Next Bucket: %ld\n", bucketMeta.nextBucket);
+            
+            if (bucketMeta.numRecords > 0) {
+                fprintf(fout, "  Records:\n");
+                long currentPosition = bucketOffset + sizeof(BucketMeta);
+                char *record = (char*)malloc(hashFile->header.recordSize);
+                for (int k = 0; k < bucketMeta.numRecords; k++) {
+                    if (fseek(hashFile->file, currentPosition, SEEK_SET) == 0 &&
+                        fread(record, hashFile->header.recordSize, 1, hashFile->file) == 1) {
+                        char *key = record + hashFile->header.keyOffset;
+                        fprintf(fout, "    Record %d (Key: %s)\n", k, key);
+                    }
+                    currentPosition += hashFile->header.recordSize;
+                }
+                free(record);
+            }
+        }
+    }
+
+    free(visited);
+    fclose(fout);
 }

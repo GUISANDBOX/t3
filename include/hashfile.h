@@ -69,4 +69,9 @@ void removerHashItem(HashFile hash, char *key);
 /// @return número de itens
 int getListaItens(HashFile hash, HashItem *itens);
 
+/// @brief Escreve todo o conteudo do hashfile em um arquivo de texto .hfd
+/// @param hash hashfile a ser despejado
+/// @param nomeArquivo nome do arquivo (base para criar o .hfd)
+void dumpHashFile(HashFile hash, char *nomeArquivo);
+
 #endif
