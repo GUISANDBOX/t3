@@ -1,17 +1,16 @@
-# Testes Unitários
+# Executar o MakeFile
 
-Caminho do arquivo: 
+```bash
+make
 ```
-cd /mnt/c/Users/reiha/Workspace/t3
+
+# Executar os testes
+
+```bash
+make run_tests
 ```
 
-gcc -I include -I unity src/calc.c test/test_calc.c unity/unity.c -o run_tests
-
-gcc -I include -I unity src/hashfile.c test/hashfile.c unity/unity.c -o run_tests
-./run_tests
-
-# Comandos
-
- ./ted -e /mnt/c/Users/reiha/Workspace/t3/examples/t1 -f c1.geo -o /mnt/c/Users/reiha/Workspace/t3/output -q c1/mudanca-todos-moradores-com-verif.qry -pm c1.pm
-
- examples\t1\c1-mudanca-todos-moradores-com-verif.svg
+# Exemplo de execução
+```
+ ./ted -e ./examples/t1 -f c1.geo -o ./output -q c1/mudanca-todos-moradores-com-verif.qry -pm c1.pm
+```
