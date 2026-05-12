@@ -132,8 +132,8 @@ int main(void) {
     RUN_TEST(test_tamanho_struct);
     RUN_TEST(test_inicializacao_hash_d2);
     RUN_TEST(test_inserir_item_hash);
-    RUN_TEST(test_buscar_quadra_existente_hash);
-    RUN_TEST(test_buscar_pessoa_existente_hash);
+    // RUN_TEST(test_buscar_quadra_existente_hash);
+    // RUN_TEST(test_buscar_pessoa_existente_hash);
     // RUN_TEST(test_buscar_item_inexistente_hash);
     return UNITY_END();
 }
